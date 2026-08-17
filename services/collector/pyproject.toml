@@ -29,7 +29,7 @@ dev = [
   "pytest>=9.0.3,<10",
   "pytest-asyncio>=1.1,<2",
   "ruff>=0.12,<1",
-  "mypy>=1.17,<2",
+  "mypy>=1.17,<3",
 ]
 
 [project.scripts]
