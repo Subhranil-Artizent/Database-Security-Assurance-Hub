@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-ARG NODE_VERSION=22.13.0
+ARG NODE_VERSION=22
 
 FROM node:${NODE_VERSION}-alpine AS dependencies
 WORKDIR /workspace
@@ -39,6 +39,13 @@ ENV NODE_ENV=production \
     PORT=3000
 WORKDIR /workspace
 
+# Apply all currently published Alpine security fixes. npm is a build tool and
+# is not needed at runtime; removing it also removes its transitive CLI package
+# tree from the production image.
+RUN apk upgrade --no-cache \
+    && rm -rf /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
+
 COPY --from=dependencies --chown=node:node /workspace/node_modules ./node_modules
 COPY --from=dependencies --chown=node:node /workspace/vendor ./vendor
 COPY --from=builder --chown=node:node /workspace/dist ./dist
@@ -49,4 +56,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD ["node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
 
-CMD ["npm", "run", "start", "--", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["node", "node_modules/vinext/dist/cli.js", "start", "--host", "0.0.0.0", "--port", "3000"]
