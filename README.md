@@ -9,8 +9,7 @@ produces a printable management report.
 > The supported local workflow uses only the loopback MySQL database
 > `insurance_sample`. It never reads, connects to, or changes Azure SQL.
 > `insurance_sample` remains read-only. Masking writes are allowed only in a
-> separate, server-derived local target such as
-> `insurance_sample_masked_<workflow>`.
+> separate, server-derived target named `insurance_sample_masked_<workflow>`.
 
 ## Contents
 
@@ -113,13 +112,24 @@ deliberately excluded from the assessment-target dropdown.
   or row cap.
 - The API derives a unique target such as
   `insurance_sample_masked_<workflow>`.
-- A maximum of 500 rows per source table is processed.
-- Sensitive values are transformed before target insertion.
+- No more than 500 rows per table is processed.
+- Selected sensitive values are transformed before any target insert.
+- Non-sensitive keys and structural fields may be retained when required to
+  preserve relationships and application utility.
+- Raw rows and values never enter the Hub API, evidence, logs, or browser.
+- Internal work is isolated in `aegisdb_mask_stage_<workflow>`.
+- Drop stale staging tables only when they match the exact worker-owned manifest.
+- One atomic rename publishes the completed set of masked tables.
+- The dedicated worker never runs `DROP`, `UPDATE`, `DELETE`, or overwrite operations on the source or
+  final database.
 - Row counts, manifests, digests, masked-value counts, and foreign keys are
   checked before success evidence is accepted.
 - Existing final targets are never overwritten, truncated, updated, or
   deleted.
 - A later workflow receives a separate target and preserves earlier targets.
+- Each new workflow gets a different empty final database.
+- An interrupted completion may recover only its own target.
+- A changed source, mismatched target, or ambiguous final/staging state fails closed.
 - Internal staging is worker-controlled and is never available to the
   read-only application test account.
 
@@ -128,6 +138,7 @@ deliberately excluded from the assessment-target dropdown.
 - Raw database rows and values never enter the Hub API, browser, logs, or
   evidence records.
 - Automated collection is evidence, not an automatic pass or score.
+- Automated copy checks never mark a control passed and never assign a score.
 - Analyst decisions require an outcome and rationale.
 - Final scores are calculated by the API, not submitted by the browser.
 - Completed decisions and evidence are retained for audit.
@@ -148,7 +159,8 @@ MYSQL_TARGET_CHARSET
 ```
 
 Every other entry in the environment file, including every Azure SQL setting,
-is ignored. The local launcher contains no Azure SQL connection step.
+is ignored. The local launcher contains no Azure SQL connection step, and the
+local masking worker never connects to or changes Azure SQL.
 
 ## Technology stack
 

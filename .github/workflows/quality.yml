@@ -68,7 +68,7 @@ jobs:
           cache: pip
           cache-dependency-path: services/collector/pyproject.toml
       - run: python -m pip install --upgrade "pip>=26.1.2,<27" build pip-audit==2.10.1
-      - run: pip install -e "services/collector[dev]"
+      - run: pip install -e "services/collector[dev,observability]"
       - run: python -m ruff check services/collector
       - run: python -m mypy services/collector/assurance_collector
       - run: python -m pytest services/collector/tests --strict-markers
@@ -147,7 +147,7 @@ jobs:
           -e COLLECTOR_ENABLE_LEASING=false
           assurance-hub-collector:ci validate-config
       - name: Scan repository for vulnerabilities, secrets, and misconfiguration
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -156,7 +156,7 @@ jobs:
           ignore-unfixed: false
           exit-code: "1"
       - name: Scan API container
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: assurance-hub-api:ci
           format: table
@@ -164,7 +164,7 @@ jobs:
           ignore-unfixed: false
           exit-code: "1"
       - name: Scan collector container
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: assurance-hub-collector:ci
           format: table
@@ -172,7 +172,7 @@ jobs:
           ignore-unfixed: false
           exit-code: "1"
       - name: Scan web build artifact container
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: assurance-hub-web:ci
           format: table
