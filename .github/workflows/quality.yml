@@ -68,7 +68,7 @@ jobs:
           cache: pip
           cache-dependency-path: services/collector/pyproject.toml
       - run: python -m pip install --upgrade "pip>=26.1.2,<27" build pip-audit==2.10.1
-      - run: pip install -e "services/collector[dev,observability]"
+      - run: pip install -e "services/collector[dev,mysql,observability]"
       - run: python -m ruff check services/collector
       - run: python -m mypy services/collector/assurance_collector
       - run: python -m pytest services/collector/tests --strict-markers

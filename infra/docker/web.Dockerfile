@@ -24,6 +24,7 @@ COPY public ./public
 COPY worker ./worker
 COPY build ./build
 COPY .openai ./.openai
+COPY scripts/local-console-auth.mjs scripts/local-synthetic-collection.mjs ./scripts/
 COPY next.config.ts next-env.d.ts postcss.config.mjs tsconfig.json vite.config.ts ./
 RUN npm run build
 
