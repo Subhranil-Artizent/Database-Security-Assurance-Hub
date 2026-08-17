@@ -161,7 +161,9 @@ jobs:
           image-ref: assurance-hub-api:ci
           format: table
           severity: HIGH,CRITICAL
-          ignore-unfixed: false
+          # Fail on actionable vulnerabilities. A build cannot remediate a
+          # distro vulnerability until the upstream vendor publishes a fix.
+          ignore-unfixed: true
           exit-code: "1"
       - name: Scan collector container
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -169,7 +171,7 @@ jobs:
           image-ref: assurance-hub-collector:ci
           format: table
           severity: HIGH,CRITICAL
-          ignore-unfixed: false
+          ignore-unfixed: true
           exit-code: "1"
       - name: Scan web build artifact container
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -177,7 +179,7 @@ jobs:
           image-ref: assurance-hub-web:ci
           format: table
           severity: HIGH,CRITICAL
-          ignore-unfixed: false
+          ignore-unfixed: true
           exit-code: "1"
       - name: Generate CycloneDX SBOMs
         run: |

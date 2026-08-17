@@ -28,7 +28,10 @@ ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONPATH=/app \
     PORT=8000
 
-RUN python -m pip uninstall -y setuptools wheel \
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall -y setuptools wheel \
     && python -m pip uninstall -y pip
 
 RUN groupadd --gid "${APP_GID}" app \
