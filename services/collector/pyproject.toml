@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 postgresql = ["psycopg[binary]>=3.2,<4"]
-oracle = ["oracledb>=2.5,<4"]
+oracle = ["oracledb>=2.5,<5"]
 sybase = ["pyodbc>=5.2,<6"]
 mysql = ["mysql-connector-python>=9.0,<10", "python-dotenv>=1.2,<2"]
 observability = [
