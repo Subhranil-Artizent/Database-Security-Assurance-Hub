@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+
+# This overlay is deliberately non-deployable. Copy it into the environment's
+# protected configuration repository, replace every documentation value, remove
+# the template-only annotation, and pass the production validator before apply.
+commonAnnotations:
+  assurance-hub.openai.com/template-only: "true"
+
+images:
+  - name: ghcr.io/example/assurance-hub-api
+    newName: registry.example.invalid/platform/assurance-hub-api
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  - name: ghcr.io/example/assurance-hub-collector
+    newName: registry.example.invalid/platform/assurance-hub-collector
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+
+patches:
+  - path: runtime-config.patch.yaml
+  - path: ingress.patch.yaml
+  - path: api-egress.patch.yaml
+  - path: collector-egress.patch.yaml

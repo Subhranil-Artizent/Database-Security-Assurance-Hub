@@ -1,0 +1,143 @@
+name: assurance-hub
+
+x-runtime: &runtime
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  api:
+    <<: *runtime
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+    image: assurance-hub-api:${IMAGE_TAG:-local}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be provided}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      AUTH_MODE: ${AUTH_MODE:-development}
+      ALLOW_INSECURE_DEV_AUTH: ${ALLOW_INSECURE_DEV_AUTH:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      OTEL_SERVICE_NAME: assurance-hub-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    ports:
+      - 127.0.0.1:${API_PORT:-8000}:8000
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    stop_grace_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - edge
+      - data
+      - observability
+    deploy:
+      resources:
+        limits:
+          cpus: "2.00"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  postgres:
+    <<: *runtime
+    image: ${POSTGRES_IMAGE:-postgres:17-alpine}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-assurance_hub}
+      POSTGRES_USER: ${POSTGRES_USER:-assurance}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be provided}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --data-checksums
+    command:
+      - postgres
+      - -c
+      - password_encryption=scram-sha-256
+      - -c
+      - ssl=off
+      - -c
+      - log_statement=ddl
+      - -c
+      - log_connections=on
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /run/postgresql:size=16m,mode=0770,uid=999,gid=999
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    stop_grace_period: 60s
+    networks:
+      - data
+    deploy:
+      resources:
+        limits:
+          cpus: "2.00"
+          memory: 2G
+        reservations:
+          cpus: "0.25"
+          memory: 512M
+
+  prometheus:
+    <<: *runtime
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v3.5.0}
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+      - --web.enable-lifecycle
+    ports:
+      - 127.0.0.1:${PROMETHEUS_PORT:-9090}:9090
+    read_only: true
+    user: "65534:65534"
+    cap_drop:
+      - ALL
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "/bin/promtool", "check", "config", "/etc/prometheus/prometheus.yml"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - observability
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1G
+        reservations:
+          cpus: "0.10"
+          memory: 256M
+
+networks:
+  edge: {}
+  data:
+    internal: true
+  observability:
+    internal: true
+
+volumes:
+  postgres-data: {}
+  prometheus-data: {}

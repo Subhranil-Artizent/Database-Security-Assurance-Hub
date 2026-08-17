@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "aegisdb.database-security.postgresql",
+  "version": "1.0.0",
+  "platform": "postgresql",
+  "title": "PostgreSQL database security evidence baseline",
+  "description": "Declarative, read-only evidence requests for encryption, data protection, access security, and masking governance in customer-validated PostgreSQL environments.",
+  "release": {
+    "released_at": "2026-08-12T00:00:00Z",
+    "status": "active",
+    "supersedes": null,
+    "immutable": true
+  },
+  "controls": [
+    {
+      "id": "postgresql.encryption.tls-session-metadata",
+      "domain": "encryption",
+      "title": "Review observed TLS session metadata",
+      "objective": "Collect TLS metadata for sessions visible to the PostgreSQL collector so an authorized reviewer can compare observed connections with the approved transport-security policy.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["production", "staging", "test", "development", "disaster_recovery"],
+        "version_scope": "customer_validated",
+        "notes": "Validate pg_stat_ssl availability and visibility for the exact PostgreSQL deployment and managed-service configuration."
+      },
+      "assessment": {
+        "mode": "automated_evidence",
+        "probe_ids": ["postgresql.tls_sessions"],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": []
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": ["ssl", "version", "cipher", "bits"],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "The probe observes currently visible sessions and does not prove that TLS is enforced for every client, listener, replica, backup path, or future connection.",
+        "Cipher and protocol acceptability must be evaluated against the customer's current cryptographic standard."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Review server TLS settings, certificate lifecycle, client authentication rules, managed-service controls, connection pools, and rollback procedures before changing transport configuration."
+      }
+    },
+    {
+      "id": "postgresql.data-protection.row-security-metadata",
+      "domain": "data_protection",
+      "title": "Review row-security metadata",
+      "objective": "Collect table-level row-security flags so an authorized reviewer can compare declared protection boundaries with the approved application authorization design.",
+      "severity": "medium",
+      "applicability": {
+        "environments": ["production", "staging", "test", "development", "disaster_recovery"],
+        "version_scope": "customer_validated",
+        "notes": "Row-level security is assessed only where the application security design requires it."
+      },
+      "assessment": {
+        "mode": "automated_evidence",
+        "probe_ids": ["postgresql.row_security"],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": []
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": ["nspname", "relname", "relrowsecurity", "relforcerowsecurity"],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "The probe does not collect policy expressions, application authorization logic, table sensitivity, role bypass paths, or query outcomes.",
+        "A table without row security is not automatically noncompliant because the approved design may use a different authorization boundary."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Confirm data classification and the application authorization design, review ownership and BYPASSRLS paths, test policy behavior with representative roles, and obtain change approval before enabling row security."
+      }
+    },
+    {
+      "id": "postgresql.access-security.role-posture-metadata",
+      "domain": "access_security",
+      "title": "Review role attribute metadata",
+      "objective": "Collect high-impact PostgreSQL role attributes so an authorized reviewer can identify candidates for ownership, lifecycle, and least-privilege analysis.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["production", "staging", "test", "development", "disaster_recovery"],
+        "version_scope": "customer_validated",
+        "notes": "Role names are security metadata and must be handled under the approved identity-data policy."
+      },
+      "assessment": {
+        "mode": "automated_evidence",
+        "probe_ids": ["postgresql.role_posture"],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": []
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": ["rolname", "rolsuper", "rolcreaterole", "rolcreatedb", "rolcanlogin"],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "The probe does not collect role memberships, object privileges, ownership, usage history, authentication method, or external identity state.",
+        "A powerful role attribute requires business-context review and does not by itself establish unauthorized access."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Correlate role ownership, effective memberships, object grants, recent use, service dependencies, and emergency access before an authorized PostgreSQL administrator changes role attributes."
+      }
+    },
+    {
+      "id": "postgresql.data-masking.governance-evidence",
+      "domain": "data_masking",
+      "title": "Review masking governance evidence",
+      "objective": "Require approved evidence that non-production PostgreSQL data uses appropriate masking techniques and that privacy, referential integrity, and application utility were validated.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["staging", "test", "development"],
+        "version_scope": "customer_validated",
+        "notes": "No masking probe is approved in the current collector catalog, so evidence review remains manual."
+      },
+      "assessment": {
+        "mode": "manual_evidence",
+        "probe_ids": [],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": [
+          "Approved masking policy and scoped data classification",
+          "Execution record from the authorized masking mechanism",
+          "Privacy and re-identification test results",
+          "Referential-integrity and application-utility validation"
+        ]
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": [],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "This control does not execute masking, inspect raw values, or assume that dynamic masking is a native PostgreSQL capability.",
+        "Document presence alone does not establish masking effectiveness; an authorized reviewer must evaluate the evidence."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Select an approved masking mechanism, define deterministic behavior where relationships require it, authorize execution, validate re-identification risk and application utility, and attach signed evidence."
+      }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "aegisdb.database-security.mysql",
+  "version": "1.0.0",
+  "platform": "mysql",
+  "title": "MySQL database security evidence baseline",
+  "description": "Declarative, read-only metadata evidence for security assurance in customer-validated MySQL environments.",
+  "release": {"released_at": "2026-08-14T00:00:00Z", "status": "active", "supersedes": null, "immutable": true},
+  "controls": [
+    {
+      "id": "mysql.encryption.transport-security-metadata",
+      "domain": "encryption",
+      "title": "Review transport-security metadata",
+      "objective": "Collect transport-enforcement and current-session cipher metadata for comparison with the approved policy.",
+      "severity": "high",
+      "applicability": {"environments": ["production", "staging", "test", "development", "disaster_recovery"], "version_scope": "customer_validated", "notes": "Loopback development may use a documented TLS exception; remote environments require verified TLS."},
+      "assessment": {"mode": "automated_evidence", "probe_ids": ["mysql.transport_security"], "decision_mode": "analyst_review_required", "manual_evidence_requirements": []},
+      "evidence": {"metadata_only": true, "allowed_fields": ["require_secure_transport", "session_cipher"], "handling": "security_metadata", "retention": "policy_defined"},
+      "limitations": ["This probe describes server policy and the collector session, not every client or backup path."],
+      "remediation": {"automation": "none", "requires_approval": true, "guidance": "Review TLS policy, certificates, clients, and rollback before changing transport settings."}
+    },
+    {
+      "id": "mysql.data-protection.schema-inventory",
+      "domain": "data_protection",
+      "title": "Review database object inventory",
+      "objective": "Collect table and view names so an authorized reviewer can confirm scope without reading application rows.",
+      "severity": "medium",
+      "applicability": {"environments": ["production", "staging", "test", "development", "disaster_recovery"], "version_scope": "customer_validated", "notes": "The probe reads information_schema metadata for the selected database only."},
+      "assessment": {"mode": "automated_evidence", "probe_ids": ["mysql.schema_inventory"], "decision_mode": "analyst_review_required", "manual_evidence_requirements": []},
+      "evidence": {"metadata_only": true, "allowed_fields": ["table_schema", "table_name", "table_type"], "handling": "security_metadata", "retention": "policy_defined"},
+      "limitations": ["Object inventory does not classify columns or inspect any application values."],
+      "remediation": {"automation": "none", "requires_approval": true, "guidance": "Reconcile the inventory with the approved asset scope before changing database objects."}
+    },
+    {
+      "id": "mysql.access-security.collector-account-context",
+      "domain": "access_security",
+      "title": "Review collector account context",
+      "objective": "Collect the authenticated account and active role so an authorized reviewer can verify the intended read-only identity.",
+      "severity": "high",
+      "applicability": {"environments": ["production", "staging", "test", "development", "disaster_recovery"], "version_scope": "customer_validated", "notes": "Grant verification remains a separate administrator responsibility."},
+      "assessment": {"mode": "automated_evidence", "probe_ids": ["mysql.account_context"], "decision_mode": "analyst_review_required", "manual_evidence_requirements": []},
+      "evidence": {"metadata_only": true, "allowed_fields": ["account", "active_role"], "handling": "security_metadata", "retention": "policy_defined"},
+      "limitations": ["Account context alone does not enumerate privileges or prove least privilege."],
+      "remediation": {"automation": "none", "requires_approval": true, "guidance": "Use a dedicated account restricted to SELECT and SHOW VIEW on the assessed database."}
+    },
+    {
+      "id": "mysql.data-masking.governance-evidence",
+      "domain": "data_masking",
+      "title": "Review masking governance evidence",
+      "objective": "Require evidence that non-production data uses suitable masking and preserves privacy, relationships, and application utility.",
+      "severity": "high",
+      "applicability": {"environments": ["staging", "test", "development"], "version_scope": "customer_validated", "notes": "No masking probe is approved, so review remains manual."},
+      "assessment": {"mode": "manual_evidence", "probe_ids": [], "decision_mode": "analyst_review_required", "manual_evidence_requirements": ["Approved masking policy and scoped data classification", "Authorized masking execution record", "Privacy and re-identification test results", "Referential-integrity and application-utility validation"]},
+      "evidence": {"metadata_only": true, "allowed_fields": [], "handling": "security_metadata", "retention": "policy_defined"},
+      "limitations": ["This control does not execute masking or inspect raw values."],
+      "remediation": {"automation": "none", "requires_approval": true, "guidance": "Use an approved masking mechanism and attach authorized validation evidence."}
+    }
+  ]
+}

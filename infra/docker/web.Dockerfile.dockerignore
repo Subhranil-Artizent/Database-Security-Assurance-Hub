@@ -1,0 +1,14 @@
+.git
+.github
+.next
+.vinext
+.wrangler
+dist
+node_modules
+services
+tests
+infra
+docs
+examples
+*.log
+.env*

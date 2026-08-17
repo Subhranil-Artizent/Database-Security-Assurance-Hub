@@ -1,0 +1,21 @@
+{
+  "name": "image-size",
+  "version": "2.0.3-aegis.1",
+  "description": "Bounded metadata-image dimension reader for the AegisDB Vinext build",
+  "private": true,
+  "type": "module",
+  "main": "./index.cjs",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "require": "./index.cjs"
+    }
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "license": "UNLICENSED"
+}

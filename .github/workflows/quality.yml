@@ -1,0 +1,199 @@
+name: Quality gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web lint, test, and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  api:
+    name: API lint, types, test, and package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/api/pyproject.toml
+      - run: python -m pip install --upgrade "pip>=26.1.2,<27" build pip-audit==2.10.1
+      - run: pip install -e "services/api[dev,observability,postgres]"
+      - run: python -m ruff check services/api
+      - run: python -m mypy services/api/assurance_hub
+      - run: python -m pytest services/api/tests --strict-markers
+      - run: python tools/validate_control_packs.py
+      - run: python -m unittest discover -s control-packs/tests -v
+      - name: Validate schema migration from an empty database
+        working-directory: services/api
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./migration-ci.db
+        run: python -m alembic upgrade head
+      - run: python -m build services/api
+      - run: python -m pip_audit --local --skip-editable
+
+  collector:
+    name: Collector lint, types, test, and package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/collector/pyproject.toml
+      - run: python -m pip install --upgrade "pip>=26.1.2,<27" build pip-audit==2.10.1
+      - run: pip install -e "services/collector[dev]"
+      - run: python -m ruff check services/collector
+      - run: python -m mypy services/collector/assurance_collector
+      - run: python -m pytest services/collector/tests --strict-markers
+      - run: python -m build services/collector
+      - name: Smoke-test installed collector entrypoint and strict configuration
+        env:
+          COLLECTOR_ENVIRONMENT: test
+          COLLECTOR_API_URL: http://127.0.0.1:8000
+          COLLECTOR_COLLECTOR_ID: collector-ci
+          COLLECTOR_TENANT_ID: tenant-ci
+          COLLECTOR_ENABLE_LEASING: "false"
+        run: assurance-collector validate-config
+      - run: python -m pip_audit --local --skip-editable
+
+  manifests:
+    name: Infrastructure, policy, and supply-chain validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.31.0
+      - name: Install policy validator dependency
+        run: python -m pip install PyYAML==6.0.3
+      - name: Validate source resource boundaries
+        run: |
+          python -m unittest discover -s tools/tests -v
+          python tools/validate_infrastructure.py --source-dir infra/kubernetes/base --profile base
+      - name: Render Kubernetes base and production template
+        run: |
+          mkdir -p .artifacts
+          kubectl kustomize infra/kubernetes/base > .artifacts/assurance-hub-base.yaml
+          kubectl kustomize infra/kubernetes/overlays/production-template > .artifacts/assurance-hub-production-template.yaml
+      - name: Validate rendered resource count and policies
+        run: |
+          python tools/validate_infrastructure.py --rendered .artifacts/assurance-hub-base.yaml --profile base
+          python tools/validate_infrastructure.py --rendered .artifacts/assurance-hub-production-template.yaml --profile production-template
+      - name: Validate Kubernetes schemas
+        run: |
+          docker run --rm -v "$PWD:/work:ro" ghcr.io/yannh/kubeconform:v0.6.7 \
+            -strict -summary -kubernetes-version 1.31.0 /work/.artifacts/assurance-hub-base.yaml
+          docker run --rm -v "$PWD:/work:ro" ghcr.io/yannh/kubeconform:v0.6.7 \
+            -strict -summary -kubernetes-version 1.31.0 /work/.artifacts/assurance-hub-production-template.yaml
+      - name: Validate SLO and alert contract
+        run: python tools/validate_observability.py
+      - name: Validate Prometheus configuration and rules
+        run: |
+          docker run --rm -v "$PWD/infra/prometheus:/etc/prometheus:ro" \
+            --entrypoint promtool prom/prometheus:v3.5.0 \
+            check config /etc/prometheus/prometheus.yml
+          docker run --rm -v "$PWD/infra/prometheus:/etc/prometheus:ro" \
+            --entrypoint promtool prom/prometheus:v3.5.0 \
+            check rules /etc/prometheus/rules/availability.yml
+      - name: Validate Compose interpolation
+        env:
+          POSTGRES_PASSWORD: ci-only-not-a-runtime-secret
+          DATABASE_URL: postgresql+asyncpg://assurance:ci-only-not-a-runtime-secret@postgres:5432/assurance_hub
+        run: docker compose -f infra/compose.yaml config --quiet
+      - name: Build API container
+        run: docker build -f infra/docker/api.Dockerfile -t assurance-hub-api:ci .
+      - name: Build collector container without database drivers
+        run: docker build -f infra/docker/collector.Dockerfile -t assurance-hub-collector:ci .
+      - name: Build non-deployable web artifact container for scanning
+        run: docker build -f infra/docker/web.Dockerfile -t assurance-hub-web:ci .
+      - name: Smoke-test collector container entrypoint
+        run: >-
+          docker run --rm
+          -e COLLECTOR_ENVIRONMENT=test
+          -e COLLECTOR_API_URL=http://127.0.0.1:8000
+          -e COLLECTOR_COLLECTOR_ID=collector-ci
+          -e COLLECTOR_TENANT_ID=tenant-ci
+          -e COLLECTOR_ENABLE_LEASING=false
+          assurance-hub-collector:ci validate-config
+      - name: Scan repository for vulnerabilities, secrets, and misconfiguration
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
+      - name: Scan API container
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: assurance-hub-api:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
+      - name: Scan collector container
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: assurance-hub-collector:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
+      - name: Scan web build artifact container
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: assurance-hub-web:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
+      - name: Generate CycloneDX SBOMs
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            anchore/syft:v1.18.1 assurance-hub-api:ci -o cyclonedx-json \
+            > .artifacts/assurance-hub-api.cdx.json
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            anchore/syft:v1.18.1 assurance-hub-collector:ci -o cyclonedx-json \
+            > .artifacts/assurance-hub-collector.cdx.json
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            anchore/syft:v1.18.1 assurance-hub-web:ci -o cyclonedx-json \
+            > .artifacts/assurance-hub-web.cdx.json
+      - name: Retain rendered manifests and SBOM evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: assurance-hub-build-evidence
+          path: .artifacts/
+          if-no-files-found: error
+          retention-days: 30

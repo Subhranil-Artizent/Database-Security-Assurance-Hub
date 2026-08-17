@@ -1,0 +1,152 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "aegisdb.database-security.oracle",
+  "version": "1.0.0",
+  "platform": "oracle",
+  "title": "Oracle database security evidence baseline",
+  "description": "Declarative, read-only evidence requests for encryption, data protection, access security, and masking governance in customer-validated Oracle environments.",
+  "release": {
+    "released_at": "2026-08-12T00:00:00Z",
+    "status": "active",
+    "supersedes": null,
+    "immutable": true
+  },
+  "controls": [
+    {
+      "id": "oracle.encryption.tablespace-metadata",
+      "domain": "encryption",
+      "title": "Review tablespace encryption metadata",
+      "objective": "Collect the declared encryption state of Oracle tablespaces so an authorized reviewer can compare it with the approved encryption policy and documented exceptions.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["production", "staging", "test", "development", "disaster_recovery"],
+        "version_scope": "customer_validated",
+        "notes": "Validate catalog access and expected tablespace exclusions for the exact Oracle edition and release."
+      },
+      "assessment": {
+        "mode": "automated_evidence",
+        "probe_ids": ["oracle.tablespace_encryption"],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": []
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": ["tablespace_name", "encrypted"],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "The probe reports catalog metadata and does not verify key custody, wallet availability, backup encryption, or recoverability.",
+        "An unencrypted entry is not automatically a control failure because approved exclusions may apply."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Confirm the policy scope, edition and licensing, key-management design, recovery plan, and maintenance window before an Oracle administrator changes encryption configuration."
+      }
+    },
+    {
+      "id": "oracle.data-protection.unified-auditing-metadata",
+      "domain": "data_protection",
+      "title": "Review unified auditing option metadata",
+      "objective": "Collect the Oracle option state associated with unified auditing for comparison with the approved audit architecture and evidence-retention requirements.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["production", "staging", "test", "development", "disaster_recovery"],
+        "version_scope": "customer_validated",
+        "notes": "Interpret the option value with the database release, deployment mode, and approved audit design."
+      },
+      "assessment": {
+        "mode": "automated_evidence",
+        "probe_ids": ["oracle.unified_auditing"],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": []
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": ["parameter", "value"],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "The option state does not demonstrate that required audit policies are enabled, forwarded, retained, monitored, or protected from alteration."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Have the control owner and Oracle administrator review the required audit events, enabled policies, storage capacity, forwarding, access restrictions, and retention before approving changes."
+      }
+    },
+    {
+      "id": "oracle.access-security.account-posture-metadata",
+      "domain": "access_security",
+      "title": "Review database account posture metadata",
+      "objective": "Collect account status, authentication type, and profile assignment so an authorized reviewer can identify candidates for lifecycle and least-privilege review.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["production", "staging", "test", "development", "disaster_recovery"],
+        "version_scope": "customer_validated",
+        "notes": "Treat usernames as security metadata and correlate them only through approved identity-governance processes."
+      },
+      "assessment": {
+        "mode": "automated_evidence",
+        "probe_ids": ["oracle.account_posture"],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": []
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": ["username", "account_status", "authentication_type", "profile"],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "The probe does not collect role grants, effective object privileges, usage history, external identity state, or business ownership.",
+        "Account status alone cannot establish whether access is authorized or excessive."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Obtain owner confirmation, analyze effective privilege and recent use, preserve emergency-access requirements, and follow the approved account quarantine process before changing an account."
+      }
+    },
+    {
+      "id": "oracle.data-masking.governance-evidence",
+      "domain": "data_masking",
+      "title": "Review masking governance evidence",
+      "objective": "Require approved evidence that non-production Oracle data uses appropriate masking techniques and that privacy, referential integrity, and application utility were validated.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["staging", "test", "development"],
+        "version_scope": "customer_validated",
+        "notes": "No masking probe is approved in the current collector catalog, so evidence review remains manual."
+      },
+      "assessment": {
+        "mode": "manual_evidence",
+        "probe_ids": [],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": [
+          "Approved masking policy and scoped data classification",
+          "Execution record from the authorized masking mechanism",
+          "Privacy and re-identification test results",
+          "Referential-integrity and application-utility validation"
+        ]
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": [],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "This control does not execute masking, inspect raw values, or assert that a particular Oracle feature or license is available.",
+        "Document presence alone does not establish masking effectiveness; an authorized reviewer must evaluate the evidence."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Define the approved masking technique and execution boundary, obtain data-owner and privacy approval, test re-identification risk and referential integrity, then attach the signed validation evidence."
+      }
+    }
+  ]
+}

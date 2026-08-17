@@ -1,0 +1,158 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "aegisdb.database-security.sybase",
+  "version": "1.0.0",
+  "platform": "sybase",
+  "title": "Sybase ASE database security evidence baseline",
+  "description": "Declarative, read-only evidence requests for encryption, data protection, access security, and masking governance in customer-validated SAP Sybase ASE environments.",
+  "release": {
+    "released_at": "2026-08-12T00:00:00Z",
+    "status": "active",
+    "supersedes": null,
+    "immutable": true
+  },
+  "controls": [
+    {
+      "id": "sybase.encryption.governance-evidence",
+      "domain": "encryption",
+      "title": "Review encryption governance evidence",
+      "objective": "Require approved evidence describing encryption at rest, transport protection, key custody, backup protection, and recovery validation for the scoped SAP Sybase ASE database.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["production", "staging", "test", "development", "disaster_recovery"],
+        "version_scope": "customer_validated",
+        "notes": "No Sybase encryption probe is approved in the current collector catalog, so evidence review remains manual."
+      },
+      "assessment": {
+        "mode": "manual_evidence",
+        "probe_ids": [],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": [
+          "Approved encryption architecture and platform scope",
+          "Key ownership and rotation evidence",
+          "Transport-security configuration review",
+          "Backup encryption and recovery-test evidence"
+        ]
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": [],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "This control does not inspect encryption configuration and does not assert feature or license availability for a particular SAP Sybase ASE release.",
+        "Document presence alone cannot demonstrate effective encryption or successful key recovery."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Have the platform owner validate edition support, licensing, key custody, transport configuration, backup protection, recovery design, dependencies, and rollback before approving encryption changes."
+      }
+    },
+    {
+      "id": "sybase.data-protection.audit-configuration-metadata",
+      "domain": "data_protection",
+      "title": "Review audit configuration metadata",
+      "objective": "Collect SAP Sybase ASE configuration entries associated with auditing for comparison with the approved logging, monitoring, and retention architecture.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["production", "staging", "test", "development", "disaster_recovery"],
+        "version_scope": "customer_validated",
+        "notes": "Interpret configuration values for the exact SAP Sybase ASE release, edition, and audit design."
+      },
+      "assessment": {
+        "mode": "automated_evidence",
+        "probe_ids": ["sybase.audit_configuration"],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": []
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": ["name", "value"],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "The name-based configuration query does not demonstrate required event selection, successful delivery, retention, monitoring, storage capacity, or tamper resistance.",
+        "Configuration names and semantics may vary by supported release and require platform-owner validation."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Review required events, audit options, storage, delivery, monitoring, access controls, performance impact, and retention with the SAP Sybase ASE administrator before changing configuration."
+      }
+    },
+    {
+      "id": "sybase.access-security.login-posture-metadata",
+      "domain": "access_security",
+      "title": "Review login posture metadata",
+      "objective": "Collect SAP Sybase ASE login status metadata so an authorized reviewer can identify candidates for ownership, lifecycle, and privileged-access analysis.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["production", "staging", "test", "development", "disaster_recovery"],
+        "version_scope": "customer_validated",
+        "notes": "Login names and full names are security metadata and require approved identity-data handling."
+      },
+      "assessment": {
+        "mode": "automated_evidence",
+        "probe_ids": ["sybase.login_posture"],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": []
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": ["name", "suid", "status", "fullname"],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "The probe does not collect effective role grants, object privileges, password material, authentication configuration, use history, external identity state, or business ownership.",
+        "Login metadata requires platform-specific interpretation and does not by itself establish whether access is authorized."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Correlate ownership, roles, effective privileges, recent use, service dependencies, and emergency-access requirements before following the approved login quarantine or privilege-change process."
+      }
+    },
+    {
+      "id": "sybase.data-masking.governance-evidence",
+      "domain": "data_masking",
+      "title": "Review masking governance evidence",
+      "objective": "Require approved evidence that non-production SAP Sybase ASE data uses suitable masking techniques and that privacy, referential integrity, and application utility were validated.",
+      "severity": "high",
+      "applicability": {
+        "environments": ["staging", "test", "development"],
+        "version_scope": "customer_validated",
+        "notes": "No masking probe is approved in the current collector catalog, so evidence review remains manual."
+      },
+      "assessment": {
+        "mode": "manual_evidence",
+        "probe_ids": [],
+        "decision_mode": "analyst_review_required",
+        "manual_evidence_requirements": [
+          "Approved masking policy and scoped data classification",
+          "Execution record from the authorized masking mechanism",
+          "Privacy and re-identification test results",
+          "Referential-integrity and application-utility validation"
+        ]
+      },
+      "evidence": {
+        "metadata_only": true,
+        "allowed_fields": [],
+        "handling": "security_metadata",
+        "retention": "policy_defined"
+      },
+      "limitations": [
+        "This control does not execute masking, inspect raw values, or assert feature or license availability for a particular SAP Sybase ASE release.",
+        "Document presence alone does not establish masking effectiveness; an authorized reviewer must evaluate the evidence."
+      ],
+      "remediation": {
+        "automation": "none",
+        "requires_approval": true,
+        "guidance": "Select an approved masking mechanism and execution boundary, obtain data-owner and privacy approval, validate re-identification risk and application behavior, and retain signed evidence."
+      }
+    }
+  ]
+}

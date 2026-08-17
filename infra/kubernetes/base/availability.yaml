@@ -1,0 +1,19 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: assurance-hub-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: assurance-hub-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: assurance-hub-collector
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: assurance-hub-collector

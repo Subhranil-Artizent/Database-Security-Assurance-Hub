@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "manifest_id": "aegisdb.control-pack-manifest",
+  "generated_at": "2026-08-12T00:00:00Z",
+  "immutability": {
+    "version_files": "append_only",
+    "digest_algorithm": "sha256",
+    "digest_input": "raw_file_bytes",
+    "replacement_policy": "new_semantic_version_required"
+  },
+  "packs": [
+    {
+      "pack_id": "aegisdb.database-security.oracle",
+      "version": "1.0.0",
+      "platform": "oracle",
+      "path": "packs/oracle/database-security/1.0.0.json",
+      "sha256": "90249e435e351b2b5569d7677614c81f787b2bedd1ef85160b2c30d61f5c9418",
+      "status": "active"
+    },
+    {
+      "pack_id": "aegisdb.database-security.postgresql",
+      "version": "1.0.0",
+      "platform": "postgresql",
+      "path": "packs/postgresql/database-security/1.0.0.json",
+      "sha256": "a3f315b8ab6ad00381b1b4db1e3a884a160e73461d0b842b1da4dd5bd26dfc27",
+      "status": "active"
+    },
+    {
+      "pack_id": "aegisdb.database-security.sybase",
+      "version": "1.0.0",
+      "platform": "sybase",
+      "path": "packs/sybase/database-security/1.0.0.json",
+      "sha256": "8f12744e272a37dab5b7c10cf9b87bcfbcbccb5d0ba3366e608d74e9ff096441",
+      "status": "active"
+    },
+    {
+      "pack_id": "aegisdb.database-security.mysql",
+      "version": "1.0.0",
+      "platform": "mysql",
+      "path": "packs/mysql/database-security/1.0.0.json",
+      "sha256": "33aad6455768d8e59cf200e6b466846b8c396ea4d374b4e7faf86a029b54bcbd",
+      "status": "active"
+    }
+  ]
+}

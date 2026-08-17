@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assurance-hub-collector
+  labels:
+    app.kubernetes.io/name: assurance-hub-collector
+    app.kubernetes.io/component: collector
+spec:
+  replicas: 2
+  minReadySeconds: 10
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: assurance-hub-collector
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: assurance-hub-collector
+        app.kubernetes.io/component: collector
+    spec:
+      serviceAccountName: assurance-hub-collector
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: assurance-hub-collector
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: assurance-hub-collector
+      containers:
+        - name: collector
+          image: ghcr.io/example/assurance-hub-collector:0.1.0
+          imagePullPolicy: IfNotPresent
+          command: ["assurance-collector", "run"]
+          env:
+            - name: COLLECTOR_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: assurance-hub-config
+                  key: ENVIRONMENT
+            - name: COLLECTOR_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: assurance-hub-config
+                  key: ASSURANCE_API_URL
+            - name: COLLECTOR_COLLECTOR_ID
+              valueFrom:
+                secretKeyRef:
+                  name: assurance-hub-runtime
+                  key: collector-id
+            - name: COLLECTOR_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: assurance-hub-runtime
+                  key: collector-tenant-id
+            - name: COLLECTOR_TOKEN_FILE
+              value: /var/run/secrets/assurance-api/token
+            - name: COLLECTOR_CREDENTIAL_ROOT
+              value: /var/run/secrets/assurance-sources
+            - name: COLLECTOR_ENABLE_LEASING
+              value: "false"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          startupProbe:
+            exec:
+              command: ["assurance-collector", "live"]
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            exec:
+              command: ["assurance-collector", "ready"]
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command: ["assurance-collector", "live"]
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: api-token
+              mountPath: /var/run/secrets/assurance-api
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Mi
+        - name: api-token
+          secret:
+            secretName: assurance-hub-runtime
+            defaultMode: 0440
+            items:
+              - key: collector-token
+                path: token

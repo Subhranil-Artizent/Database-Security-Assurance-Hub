@@ -1,0 +1,145 @@
+groups:
+  - name: assurance-hub-slo-recording
+    interval: 30s
+    rules:
+      - record: assurance:http_5xx_ratio:rate5m
+        expr: >-
+          sum(rate(assurance_http_requests_total{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(assurance_http_requests_total[5m])), 0.001)
+      - record: assurance:http_5xx_ratio:rate30m
+        expr: >-
+          sum(rate(assurance_http_requests_total{status=~"5.."}[30m]))
+          /
+          clamp_min(sum(rate(assurance_http_requests_total[30m])), 0.001)
+      - record: assurance:http_5xx_ratio:rate1h
+        expr: >-
+          sum(rate(assurance_http_requests_total{status=~"5.."}[1h]))
+          /
+          clamp_min(sum(rate(assurance_http_requests_total[1h])), 0.001)
+      - record: assurance:http_5xx_ratio:rate6h
+        expr: >-
+          sum(rate(assurance_http_requests_total{status=~"5.."}[6h]))
+          /
+          clamp_min(sum(rate(assurance_http_requests_total[6h])), 0.001)
+      - record: assurance:http_latency_seconds:p95_rate10m
+        expr: >-
+          histogram_quantile(
+            0.95,
+            sum by (le) (
+              rate(assurance_http_request_duration_seconds_bucket{method="GET"}[10m])
+            )
+          )
+
+  - name: assurance-hub-availability
+    rules:
+      - alert: AssuranceHubApiDown
+        expr: up{job="assurance-hub-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: assurance-hub-api
+        annotations:
+          summary: Database Security Assurance API is unavailable
+          runbook: docs/runbook.md#api-is-unavailable
+
+      - alert: AssuranceHubApiMetricsMissing
+        expr: absent(up{job="assurance-hub-api"})
+        for: 5m
+        labels:
+          severity: warning
+          service: assurance-hub-api
+        annotations:
+          summary: API metrics target has disappeared from Prometheus
+          runbook: docs/runbook.md#api-is-unavailable
+
+      # 99.9% monthly availability leaves a 0.1% error budget. The fast-burn
+      # threshold consumes that budget at 14.4x across both short and long windows.
+      - alert: AssuranceHubApiErrorBudgetFastBurn
+        expr: >-
+          assurance:http_5xx_ratio:rate5m > 0.0144
+          and
+          assurance:http_5xx_ratio:rate1h > 0.0144
+        for: 2m
+        labels:
+          severity: critical
+          service: assurance-hub-api
+          slo: availability
+        annotations:
+          summary: API is rapidly consuming its monthly availability error budget
+          runbook: docs/runbook.md#api-error-budget-burn
+
+      - alert: AssuranceHubApiErrorBudgetSlowBurn
+        expr: >-
+          assurance:http_5xx_ratio:rate30m > 0.006
+          and
+          assurance:http_5xx_ratio:rate6h > 0.006
+        for: 15m
+        labels:
+          severity: warning
+          service: assurance-hub-api
+          slo: availability
+        annotations:
+          summary: API is steadily consuming its monthly availability error budget
+          runbook: docs/runbook.md#api-error-budget-burn
+
+      - alert: AssuranceHubApiReadLatencyHigh
+        expr: >-
+          assurance:http_latency_seconds:p95_rate10m > 0.5
+          and
+          sum(rate(assurance_http_requests_total{method="GET"}[10m])) > 0.1
+        for: 15m
+        labels:
+          severity: warning
+          service: assurance-hub-api
+          slo: read-latency
+        annotations:
+          summary: API p95 latency is above the initial 500 millisecond objective
+          runbook: docs/runbook.md#api-latency-is-high
+
+      - alert: AssuranceHubGovernanceWriteFailed
+        expr: increase(assurance_governance_write_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: assurance-hub-api
+        annotations:
+          summary: A durable idempotency or audit outcome write failed
+          runbook: docs/runbook.md#evidence-or-audit-write-failure
+
+      - alert: AssuranceHubScanFailuresElevated
+        expr: >-
+          sum(rate(assurance_scan_jobs_completed_total{outcome="failed"}[15m]))
+          /
+          clamp_min(sum(rate(assurance_scan_jobs_completed_total[15m])), 0.001)
+          > 0.20
+        for: 15m
+        labels:
+          severity: warning
+          service: assurance-hub-collector
+        annotations:
+          summary: More than 20 percent of completed scan jobs are failing
+          runbook: docs/runbook.md#collector-job-failures-are-elevated
+
+      - alert: AssuranceHubLeasedWorkStalled
+        expr: >-
+          sum(increase(assurance_scan_jobs_leased_total[1h])) > 0
+          and
+          sum(increase(assurance_scan_jobs_completed_total[1h])) == 0
+        for: 15m
+        labels:
+          severity: warning
+          service: assurance-hub-collector
+        annotations:
+          summary: Work was leased but no scan completed during the last hour
+          runbook: docs/runbook.md#collector-work-is-stalled
+
+      - alert: AssuranceHubLeaseRetryBudgetExhausted
+        expr: increase(assurance_jobs_reconciled_total{outcome="failed"}[15m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: assurance-hub-collector
+        annotations:
+          summary: At least one expired lease exhausted its retry budget
+          runbook: docs/runbook.md#collector-job-failures-are-elevated

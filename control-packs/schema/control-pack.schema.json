@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegisdb.example/schemas/control-pack/1.0.0",
+  "title": "AegisDB declarative database security control pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "pack_id",
+    "version",
+    "platform",
+    "title",
+    "description",
+    "release",
+    "controls"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "pack_id": {
+      "type": "string",
+      "pattern": "^aegisdb\\.database-security\\.(oracle|postgresql|sybase|mysql)$"
+    },
+    "version": {
+      "$ref": "#/$defs/semanticVersion"
+    },
+    "platform": {
+      "$ref": "#/$defs/platform"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "minLength": 24,
+      "maxLength": 500
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["released_at", "status", "supersedes", "immutable"],
+      "properties": {
+        "released_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "enum": ["active", "deprecated"]
+        },
+        "supersedes": {
+          "oneOf": [
+            {"type": "null"},
+            {"$ref": "#/$defs/semanticVersion"}
+          ]
+        },
+        "immutable": {
+          "const": true
+        }
+      }
+    },
+    "controls": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/control"
+      }
+    }
+  },
+  "$defs": {
+    "semanticVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "platform": {
+      "enum": ["oracle", "postgresql", "sybase", "mysql"]
+    },
+    "domain": {
+      "enum": ["encryption", "data_protection", "access_security", "data_masking"]
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "domain",
+        "title",
+        "objective",
+        "severity",
+        "applicability",
+        "assessment",
+        "evidence",
+        "limitations",
+        "remediation"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(oracle|postgresql|sybase|mysql)\\.(encryption|data-protection|access-security|data-masking)\\.[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "domain": {
+          "$ref": "#/$defs/domain"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 140
+        },
+        "objective": {
+          "type": "string",
+          "minLength": 24,
+          "maxLength": 600
+        },
+        "severity": {
+          "enum": ["critical", "high", "medium", "low", "info"]
+        },
+        "applicability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["environments", "version_scope", "notes"],
+          "properties": {
+            "environments": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": ["production", "staging", "test", "development", "disaster_recovery"]
+              }
+            },
+            "version_scope": {
+              "enum": ["vendor_supported", "customer_validated"]
+            },
+            "notes": {
+              "type": "string",
+              "minLength": 12,
+              "maxLength": 400
+            }
+          }
+        },
+        "assessment": {
+          "$ref": "#/$defs/assessment"
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["metadata_only", "allowed_fields", "handling", "retention"],
+          "properties": {
+            "metadata_only": {
+              "const": true
+            },
+            "allowed_fields": {
+              "type": "array",
+              "maxItems": 30,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_$]*$"
+              }
+            },
+            "handling": {
+              "const": "security_metadata"
+            },
+            "retention": {
+              "const": "policy_defined"
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 400
+          }
+        },
+        "remediation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["automation", "requires_approval", "guidance"],
+          "properties": {
+            "automation": {
+              "const": "none"
+            },
+            "requires_approval": {
+              "const": true
+            },
+            "guidance": {
+              "type": "string",
+              "minLength": 20,
+              "maxLength": 600
+            }
+          }
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "probe_ids", "decision_mode", "manual_evidence_requirements"],
+      "properties": {
+        "mode": {
+          "enum": ["automated_evidence", "manual_evidence"]
+        },
+        "probe_ids": {
+          "type": "array",
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(oracle|postgresql|sybase|mysql)\\.[a-z][a-z0-9_]*$"
+          }
+        },
+        "decision_mode": {
+          "const": "analyst_review_required"
+        },
+        "manual_evidence_requirements": {
+          "type": "array",
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 300
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"mode": {"const": "automated_evidence"}},
+            "required": ["mode"]
+          },
+          "then": {
+            "properties": {
+              "probe_ids": {"minItems": 1},
+              "manual_evidence_requirements": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {"mode": {"const": "manual_evidence"}},
+            "required": ["mode"]
+          },
+          "then": {
+            "properties": {
+              "probe_ids": {"maxItems": 0},
+              "manual_evidence_requirements": {"minItems": 1}
+            }
+          }
+        }
+      ]
+    }
+  }
+}
