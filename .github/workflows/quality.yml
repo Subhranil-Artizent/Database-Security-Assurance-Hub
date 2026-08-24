@@ -193,7 +193,7 @@ jobs:
             anchore/syft:v1.18.1 assurance-hub-web:ci -o cyclonedx-json \
             > .artifacts/assurance-hub-web.cdx.json
       - name: Retain rendered manifests and SBOM evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: assurance-hub-build-evidence
           path: .artifacts/
